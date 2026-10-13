@@ -28,7 +28,7 @@ jobs:
         run: npm install -g npm@latest
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --registry=https://registry.npmjs.org
 
       - name: Build and Run Tests
         run: npm test
