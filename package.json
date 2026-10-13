@@ -1,0 +1,33 @@
+{
+  "name": "pi-agent-memory-repo",
+  "version": "1.0.0",
+  "description": "Cognition spec compliant persistent Git-backed agent memory repo for Pi coding agent",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "keywords": [
+    "pi-package",
+    "agent-memory",
+    "agent-memory-repo",
+    "cognition"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node --test dist/tests/*.test.js"
+  },
+  "pi": {
+    "extensions": [
+      "./dist/src/index.js"
+    ],
+    "skills": [
+      "./skills/agent-memory",
+      "./skills/agent-memory-repo"
+    ]
+  },
+  "author": "Pi Agent Team",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/node": "^22.0.0"
+  }
+}
