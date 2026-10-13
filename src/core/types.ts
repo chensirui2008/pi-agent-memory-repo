@@ -106,15 +106,41 @@ export interface ToolDefinition<TParams = any> {
   };
 }
 
+export interface ProposedMemoryEntry {
+  id: string;
+  fact: string;
+  scope: MemoryScope;
+  file: string;
+  reason?: string;
+  selected: boolean;
+}
+
+export interface ProposalResult {
+  confirmed: boolean;
+  approvedItems: ProposedMemoryEntry[];
+}
+
 export interface CommandContext {
   ui?: {
     notify?: (message: string, type?: "info" | "warning" | "error" | "success") => void;
     log?: (message: string) => void;
+    confirm?: (title: string, message: string, opts?: any) => Promise<boolean>;
+    select?: (title: string, options: string[], opts?: any) => Promise<string | undefined>;
+    custom?: <T>(
+      factory: (tui: any, theme: any, keybindings: any, done: (result: T) => void) => any,
+      options?: any
+    ) => Promise<T | undefined>;
+    [key: string]: any;
   };
   cwd?: string;
   workspaceDir?: string;
   sessionManager?: { getBranch(): Array<{ type: string; message?: any }> };
   session?: any;
+  messages?: any[];
+  modelRegistry?: any;
+  model?: any;
+  mode?: string;
+  hasUI?: boolean;
   [key: string]: any;
 }
 

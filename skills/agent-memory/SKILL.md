@@ -116,6 +116,6 @@ When discovering a non-obvious requirement, bug resolution, or user preference:
 
 Users and agents can invoke slash commands:
 - `/init memory [global|project|all]`: Initializes memory directories and Git repos.
-- `/remember [notes]`: Directly captures an instruction or summarizes the conversation turn.
+- `/remember [notes]`: Autonomously distills conversation key points, presents an interactive TUI proposal modal, and commits to Git memory only after user approval.
 - `/dreaming [global|project|all]`: Analyzes memories, eliminates duplicates, resolves conflicts, and synthesizes higher-level pattern rules.
 - `/status`: Displays memory repository paths, Git branches, commit counts, and broken link diagnostics.

@@ -38,7 +38,7 @@
   - `memory_list`: Lists directory trees, entry counts, and broken link diagnostics.
 - **Interactive Slash Commands**:
   - `/init memory [global|project|all]`: Initializes memory repositories and Git commits.
-  - `/remember [notes]`: Saves explicit facts or summarizes current conversation learnings.
+  - `/remember [notes]`: Autonomously distills conversation key points, presents an interactive TUI proposal modal, and writes to memory upon user approval.
   - `/dreaming [global|project|all]`: Runs pattern detection and memory consolidation.
   - `/status`: Displays memory repository paths, commit counts, and link health.
 - **Instant Context Injection**:
@@ -117,10 +117,11 @@ Each memory repository (Universal `~/.pi/agent-memory` and Project `<workspace>/
   ```
 - **Record Memories**:
   ```text
+  /remember
   /remember User prefers strict TypeScript with zero any
   /remember Always pass HOME=/tmp when running sandboxed commands
   ```
-  *(Running `/remember` without arguments extracts and summarizes key learnings from recent session conversation turns)*
+  *(Running `/remember` autonomously summarizes the conversation, distills key points, and renders an interactive TUI proposal modal. Users can navigate `[↑/↓]`, toggle items `[Space]`, and approve `[Enter/y]` before memories are committed to Git. In RPC mode, the proposal uses the supported confirmation dialog.)*
 - **Consolidate & Dream**:
   ```text
   /dreaming
@@ -167,6 +168,7 @@ The following environment variables can customize storage paths:
    - **项目记忆（Project Memory）**：存储在 `<workspace>/.pi/memory/`，记录当前代码库架构规律、测试注意事项和调试结论。
 3. **梦境记忆固化（Dreaming）**：跨会话自动扫描、去重、解决冲突，并将高频共性规则归纳至 `topics/patterns.md`。
 4. **轻量与开箱即用**：自带 4 个标准大模型 Tool，4 个交互式斜杠指令，并在会话启动时无缝注入上下文。
+5. **自主提炼与 TUI 提案审批**：`/remember` 自主提炼会话重点，以交互式终端 TUI 呈现记忆提案，支持键盘勾选导航；RPC 模式使用确认对话框，用户同意后才提交写入 Git。
 
 ### 快速安装
 

@@ -4,7 +4,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { handleInitCommand } from "../src/commands/init.js";
-import { handleRememberCommand } from "../src/commands/remember.js";
+import { createMemoryProposalComponent, presentMemoryProposal, handleRememberCommand } from "../src/commands/remember.js";
 import { handleDreamingCommand } from "../src/commands/dreaming.js";
 import { handleStatusCommand } from "../src/commands/status.js";
 import { memoryRecallTool } from "../src/tools/recall.js";
@@ -13,7 +13,8 @@ import { memoryReadTool } from "../src/tools/read.js";
 import { memoryListTool } from "../src/tools/list.js";
 import { buildMemoryContext } from "../src/index.js";
 import extensionEntrypoint from "../src/index.js";
-import { ExtensionAPI } from "../src/core/types.js";
+import { visibleWidth } from "@mariozechner/pi-tui";
+import { ExtensionAPI, ProposedMemoryEntry, ProposalResult } from "../src/core/types.js";
 
 describe("Slash Commands, Tools & Extension Tests", () => {
   let sandboxGlobal: string;
@@ -287,5 +288,316 @@ describe("Slash Commands, Tools & Extension Tests", () => {
     delete process.env.AGENT_MEMORY_PROJECT_DIR;
     fs.rmSync(tmpGlobal, { recursive: true, force: true });
     fs.rmSync(tmpProject, { recursive: true, force: true });
+  });
+
+  it("presents TUI proposal via ctx.ui.custom and commits memories upon user approval (Enter/y)", async () => {
+    const tmpProject = fs.mkdtempSync(path.join(os.tmpdir(), "tui-rem-proj-"));
+    process.env.AGENT_MEMORY_PROJECT_DIR = tmpProject;
+
+    const notified: string[] = [];
+    let customRenderedLines: string[] = [];
+    let customHandled = false;
+
+    const mockCtx = {
+      workspaceDir: tmpProject,
+      ui: {
+        notify: (msg: string) => notified.push(msg),
+        custom: async (factory: any) => {
+          let doneResult: any = null;
+          const mockTui = { requestRender: () => {} };
+          const mockTheme = {
+            fg: (_col: string, s: string) => s,
+            bold: (s: string) => `*${s}*`,
+            dim: (s: string) => s,
+          };
+          const component = factory(mockTui, mockTheme, {}, (res: any) => {
+            doneResult = res;
+          });
+
+          // Test rendering
+          customRenderedLines = component.render(80);
+
+          // Test user approving with Enter
+          component.handleInput("\r");
+          customHandled = true;
+          return doneResult;
+        },
+      },
+      sessionManager: {
+        getBranch: () => [
+          {
+            type: "message",
+            message: {
+              role: "user",
+              content: "Remember: always enforce strict type-checking in TypeScript files",
+            },
+          },
+        ],
+      },
+    };
+
+    await handleRememberCommand("", mockCtx);
+
+    assert.equal(customHandled, true);
+    assert.ok(customRenderedLines.some((l) => l.includes("Memory Proposal")));
+    assert.ok(customRenderedLines.some((l) => l.includes("enforce strict type-checking")));
+    assert.ok(notified.some((n) => n.includes("Summarized and stored")));
+
+    // Verify written to disk
+    const targetFile = path.join(tmpProject, "topics/session_notes.md");
+    assert.ok(fs.existsSync(targetFile));
+    const content = fs.readFileSync(targetFile, "utf8");
+    assert.ok(content.includes("enforce strict type-checking"));
+
+    delete process.env.AGENT_MEMORY_PROJECT_DIR;
+    fs.rmSync(tmpProject, { recursive: true, force: true });
+  });
+
+  it("discards TUI proposal when user cancels via Esc or 'n', writing nothing", async () => {
+    const tmpProject = fs.mkdtempSync(path.join(os.tmpdir(), "tui-cancel-proj-"));
+    process.env.AGENT_MEMORY_PROJECT_DIR = tmpProject;
+
+    const notified: string[] = [];
+    const mockCtx = {
+      workspaceDir: tmpProject,
+      ui: {
+        notify: (msg: string) => notified.push(msg),
+        custom: async (factory: any) => {
+          let doneResult: any = null;
+          const mockTui = { requestRender: () => {} };
+          const component = factory(mockTui, null, {}, (res: any) => {
+            doneResult = res;
+          });
+
+          // User presses 'n' to reject
+          component.handleInput("n");
+          return doneResult;
+        },
+      },
+      sessionManager: {
+        getBranch: () => [
+          {
+            type: "message",
+            message: {
+              role: "user",
+              content: "Remember: temporary secret that must not be committed",
+            },
+          },
+        ],
+      },
+    };
+
+    await handleRememberCommand("", mockCtx);
+
+    assert.ok(notified.some((n) => n.includes("proposal discarded")));
+
+    // Verify nothing written
+    const targetFile = path.join(tmpProject, "topics/session_notes.md");
+    assert.equal(fs.existsSync(targetFile), false);
+
+    delete process.env.AGENT_MEMORY_PROJECT_DIR;
+    fs.rmSync(tmpProject, { recursive: true, force: true });
+  });
+
+  it("supports interactive toggle in TUI component so only selected items are committed", async () => {
+    const tmpProject = fs.mkdtempSync(path.join(os.tmpdir(), "tui-toggle-proj-"));
+    process.env.AGENT_MEMORY_PROJECT_DIR = tmpProject;
+
+    const notified: string[] = [];
+    const mockCtx = {
+      workspaceDir: tmpProject,
+      ui: {
+        notify: (msg: string) => notified.push(msg),
+        custom: async (factory: any) => {
+          let doneResult: any = null;
+          const mockTui = { requestRender: () => {} };
+          const component = factory(mockTui, null, {}, (res: any) => {
+            doneResult = res;
+          });
+
+          // Focused on item 0: press space to unselect item 0
+          component.handleInput(" ");
+          // Press down arrow to move to item 1
+          component.handleInput("\x1b[B");
+          // Press 'y' to approve remaining selected items
+          component.handleInput("y");
+          return doneResult;
+        },
+      },
+      session: {
+        messages: [
+          { role: "user", content: "Remember: item 1 to unselect" },
+          { role: "assistant", content: "Remember: item 2 to keep and save" },
+        ],
+      },
+    };
+
+    await handleRememberCommand("", mockCtx);
+
+    assert.ok(notified.some((n) => n.includes("Summarized and stored 1 session learnings")));
+
+    const content = fs.readFileSync(path.join(tmpProject, "topics/session_notes.md"), "utf8");
+    assert.equal(content.includes("item 1 to unselect"), false);
+    assert.ok(content.includes("item 2 to keep and save"));
+
+    delete process.env.AGENT_MEMORY_PROJECT_DIR;
+    fs.rmSync(tmpProject, { recursive: true, force: true });
+  });
+
+  it("handles ctx.ui.confirm approval and rejection flows", async () => {
+    const tmpProject = fs.mkdtempSync(path.join(os.tmpdir(), "confirm-proj-"));
+    process.env.AGENT_MEMORY_PROJECT_DIR = tmpProject;
+
+    const notified: string[] = [];
+    let confirmPromptShown = "";
+    let shouldApprove = false;
+
+    const mockCtx = {
+      workspaceDir: tmpProject,
+      ui: {
+        notify: (msg: string) => notified.push(msg),
+        confirm: async (_title: string, prompt: string) => {
+          confirmPromptShown = prompt;
+          return shouldApprove;
+        },
+      },
+      session: {
+        messages: [{ role: "user", content: "Note: testing rules for unit tests" }],
+      },
+    };
+
+    // 1. Rejected
+    shouldApprove = false;
+    await handleRememberCommand("", mockCtx);
+    assert.ok(confirmPromptShown.includes("testing rules for unit tests"));
+    assert.ok(notified.some((n) => n.includes("proposal discarded")));
+    assert.equal(fs.existsSync(path.join(tmpProject, "topics/testing_rules.md")), false);
+
+    // 2. Approved
+    shouldApprove = true;
+    await handleRememberCommand("", mockCtx);
+    assert.ok(notified.some((n) => n.includes("Summarized and stored")));
+    assert.ok(fs.existsSync(path.join(tmpProject, "topics/testing_rules.md")));
+
+    delete process.env.AGENT_MEMORY_PROJECT_DIR;
+    fs.rmSync(tmpProject, { recursive: true, force: true });
+  });
+
+  it("summarizes conversation with modelRegistry when model is available", async () => {
+    const tmpProject = fs.mkdtempSync(path.join(os.tmpdir(), "model-proj-"));
+    process.env.AGENT_MEMORY_PROJECT_DIR = tmpProject;
+
+    const notified: string[] = [];
+    const mockCtx = {
+      workspaceDir: tmpProject,
+      model: { id: "test-model", provider: "mock" },
+      modelRegistry: {
+        complete: async () => ({
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify([
+                {
+                  fact: "Custom architecture requires pure functional components",
+                  scope: "project",
+                  file: "topics/architecture.md",
+                  reason: "architecture invariant",
+                },
+              ]),
+            },
+          ],
+        }),
+      },
+      ui: {
+        notify: (msg: string) => notified.push(msg),
+        confirm: async () => true,
+      },
+      session: {
+        messages: [
+          { role: "user", content: "How should we design the UI components?" },
+          { role: "assistant", content: "We decided to keep everything pure and functional." },
+        ],
+      },
+    };
+
+    await handleRememberCommand("", mockCtx);
+
+    assert.ok(notified.some((n) => n.includes("Custom architecture requires pure functional components")));
+    const archFile = path.join(tmpProject, "topics/architecture.md");
+    assert.ok(fs.existsSync(archFile));
+    const content = fs.readFileSync(archFile, "utf8");
+    assert.ok(content.includes("Custom architecture requires pure functional components"));
+
+    delete process.env.AGENT_MEMORY_PROJECT_DIR;
+    fs.rmSync(tmpProject, { recursive: true, force: true });
+  });
+});
+
+
+
+describe("Memory proposal terminal and RPC compatibility", () => {
+  const items: ProposedMemoryEntry[] = [
+    { id: "1", fact: "中文 🧠 👩‍💻 e\u0301 " + "long-unbroken-fact".repeat(8), file: "topics/" + "long-path".repeat(12) + ".md", scope: "project", selected: true },
+    { id: "2", fact: "Second memory", file: "topics/session_notes.md", scope: "global", selected: true },
+  ];
+
+  it("keeps every rendered line within the available terminal columns", () => {
+    const component = createMemoryProposalComponent(items, null, null, () => {});
+    for (const width of [0, 1, 4, 5, 10, 20, 40, 60, 80, 100, 120]) {
+      const lines = component.render(width);
+      if (width >= 5) assert.ok(lines.length > 0);
+      for (const line of lines) {
+        assert.ok(visibleWidth(line) <= width, `width ${width}: ${visibleWidth(line)} columns`);
+      }
+      assert.ok(lines.every((line) => !line.includes("\n")));
+    }
+    const text = component.render(40).join("\n");
+    assert.ok(text.includes("Navigate"));
+    assert.ok(text.includes("Cancel"));
+  });
+
+  it("accepts Kitty Enter, Escape and Space, and application-mode arrows", () => {
+    let result: ProposalResult | undefined;
+    const component = createMemoryProposalComponent(items, null, null, (res) => { result = res; });
+    component.handleInput("\x1bOB");
+    component.handleInput("\x1b[32u"); // Unselect second item
+    component.handleInput("\x1bOA");
+    component.handleInput("\x1b[32u"); // Unselect first item
+    component.handleInput("\x1bOB"); // Application-mode down
+    component.handleInput("\x1b[32u"); // Select second item
+    component.handleInput("\x1b[13u");
+    assert.equal(result?.confirmed, true);
+    assert.deepEqual(result?.approvedItems.map((item) => item.id), ["2"]);
+    component.handleInput("\x1b[27u");
+    assert.deepEqual(result, { confirmed: false, approvedItems: [] });
+  });
+
+  it("falls back from unsupported RPC custom UI to confirm for approval and rejection", async () => {
+    for (const confirmed of [true, false]) {
+      let shown = false;
+      const result = await presentMemoryProposal(items, { ui: {
+        custom: async () => undefined,
+        confirm: async (_title, prompt) => {
+          shown = true;
+          assert.ok(prompt.includes(items[0].fact));
+          return confirmed;
+        },
+      } });
+      assert.equal(shown, true);
+      assert.deepEqual(result, { confirmed, approvedItems: confirmed ? items : [] });
+    }
+  });
+
+  it("does not reopen confirmation after explicit cancellation in custom UI", async () => {
+    const result = await presentMemoryProposal(items, { ui: {
+      custom: async <T>() => ({ confirmed: false, approvedItems: [] }) as T,
+      confirm: async () => { assert.fail("Cancellation must not fall back"); },
+    } });
+    assert.deepEqual(result, { confirmed: false, approvedItems: [] });
+  });
+
+  it("does not approve when custom UI is unsupported and no confirmation UI exists", async () => {
+    assert.deepEqual(await presentMemoryProposal(items, { ui: { custom: async () => undefined } }),
+      { confirmed: false, approvedItems: [] });
   });
 });
