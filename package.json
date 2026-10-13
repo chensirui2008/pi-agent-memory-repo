@@ -38,10 +38,10 @@
   "homepage": "https://pi.dev/packages",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pi-dev-packages/pi-agent-memory-repo.git"
+    "url": "git+https://github.com/chensirui2008/pi-agent-memory-repo.git"
   },
   "bugs": {
-    "url": "https://github.com/pi-dev-packages/pi-agent-memory-repo/issues"
+    "url": "https://github.com/chensirui2008/pi-agent-memory-repo/issues"
   },
   "publishConfig": {
     "access": "public",

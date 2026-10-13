@@ -6,6 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Pi Package](https://img.shields.io/badge/Pi-Package-orange.svg)](https://pi.dev/packages)
 [![Cognition Spec](https://img.shields.io/badge/Spec-Cognition_Agent_Memory-green.svg)](https://cognition.com/agent-memory-repo)
+[![CI & Publish](https://github.com/chensirui2008/pi-agent-memory-repo/actions/workflows/release.yml/badge.svg)](https://github.com/chensirui2008/pi-agent-memory-repo/actions/workflows/release.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-ES2022-3178C6.svg)](https://www.typescriptlang.org/)
 
 [English](#features) | [中文说明](#中文说明)
@@ -74,7 +75,7 @@ npm install pi-agent-memory-repo
 
 ```bash
 # From git repository
-pi install git:github.com/pi-dev-packages/pi-agent-memory-repo
+pi install git:github.com/chensirui2008/pi-agent-memory-repo
 
 # From local directory
 pi install /path/to/pi-agent-memory-repo

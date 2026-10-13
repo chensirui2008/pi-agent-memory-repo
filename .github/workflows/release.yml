@@ -1,0 +1,54 @@
+name: CI & Publish
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # Required for npm provenance attestation
+
+jobs:
+  test-and-publish:
+    name: Test, Build & Publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and Run Tests
+        run: npm test
+
+      - name: Check if version is already published on npm
+        id: check_version
+        run: |
+          PKG_NAME=$(node -p "require('./package.json').name")
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "Package: $PKG_NAME, Version: $PKG_VERSION"
+          
+          # Check whether version already exists in npm registry
+          if npm view "$PKG_NAME@$PKG_VERSION" version > /dev/null 2>&1; then
+            echo "version_exists=true" >> "$GITHUB_OUTPUT"
+            echo "::notice ::Version $PKG_VERSION is already published on npm. Skipping publish."
+          else
+            echo "version_exists=false" >> "$GITHUB_OUTPUT"
+            echo "::notice ::Version $PKG_VERSION is not yet published. Proceeding to publish."
+          fi
+
+      - name: Publish to npm (2FA bypassed via Automation/Granular Token)
+        if: steps:check_version.outputs.version_exists == 'false'
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
