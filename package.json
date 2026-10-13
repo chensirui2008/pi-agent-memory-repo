@@ -1,6 +1,6 @@
 {
   "name": "pi-agent-memory-repo",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Cognition spec compliant persistent Git-backed agent memory repo for Pi coding agent",
   "type": "module",
   "main": "dist/src/index.js",

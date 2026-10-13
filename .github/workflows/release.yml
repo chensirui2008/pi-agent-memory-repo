@@ -23,7 +23,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: 'https://registry.npmjs.org'
 
       - name: Ensure latest npm for Trusted Publishing support
         run: npm install -g npm@latest
@@ -53,5 +52,3 @@ jobs:
       - name: Publish to npm (via Trusted Publishing / OIDC)
         if: steps:check_version.outputs.version_exists == 'false'
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
