@@ -1,4 +1,4 @@
-name: CI & Publish
+name: "CI and Publish"
 
 on:
   push:
@@ -50,5 +50,5 @@ jobs:
           fi
 
       - name: Publish to npm (via Trusted Publishing / OIDC)
-        if: steps:check_version.outputs.version_exists == 'false'
+        if: steps.check_version.outputs.version_exists == 'false'
         run: npm publish --provenance --access public
