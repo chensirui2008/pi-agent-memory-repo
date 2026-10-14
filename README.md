@@ -1,6 +1,6 @@
 # pi-agent-memory-repo
 
-> Cognition-spec compliant, Git-backed persistent memory repository package for the **Pi coding agent** (`pi.dev` / `@earendil-works/pi-coding-agent`).
+> Cognition-spec compliant, Git-backed persistent memory repository package for the **Pi coding agent and OMP** (`pi.dev` / `@earendil-works/pi-coding-agent`).
 
 [![npm version](https://img.shields.io/npm/v/pi-agent-memory-repo.svg)](https://www.npmjs.com/package/pi-agent-memory-repo)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -83,6 +83,59 @@ pi install /path/to/pi-agent-memory-repo
 # Or run directly with extension flag
 pi --extension /path/to/pi-agent-memory-repo/dist/src/index.js
 ```
+
+---
+
+## OMP (oh-my-pi)
+
+This package also provides an independent OMP entry point (`dist/src/omp.js`). OMP loads `omp.extensions`; Pi continues to load `pi.extensions`. The OMP entry does not import the Pi TUI or invoke the Pi registration function.
+
+Build and try the dedicated entry locally:
+
+```bash
+npm run build
+omp -e ./dist/src/omp.js
+
+# Install the local package as an OMP plugin
+omp plugin link /absolute/path/to/pi-agent-memory-repo
+```
+
+In the active OMP user or project `config.yml`, disable its built-in memory backend:
+
+```yaml
+memory:
+  backend: off
+```
+
+This plugin uses its own `memory_*` tools and does not manage OMP's built-in `/memory`, `ctx.memory`, or `memory://` URLs. See the official [extension loading documentation](https://github.com/can1357/oh-my-pi/blob/main/docs/skills/authoring-extensions.md) and [extension API](https://github.com/can1357/oh-my-pi/blob/main/docs/extensions.md).
+
+| Command | Behavior |
+| :--- | :--- |
+| `/init-memory [global\|project\|all]` | Initialize the selected repositories |
+| `/memory-status` | Show paths, entries, links and Git status |
+| `/remember [global\|project] [note]` | Save explicit notes or propose session memories |
+| `/dreaming [global\|project\|all]` | Run the existing rule-based consolidation |
+
+OMP leaves `/init` and `/status` available to the host. `memory_recall`, `memory_read` and `memory_list` use OMP's `read` approval tier; `memory_write` uses `write`. Their parameters and storage format match Pi.
+
+Pi and OMP share `~/.pi/agent-memory` and `<workspace>/.pi/memory`, including overrides from `AGENT_MEMORY_GLOBAL_DIR` and `AGENT_MEMORY_PROJECT_DIR`. No data migration is required. Use the hosts sequentially when writing to the same repository; simultaneous multi-process writes are not guaranteed safe.
+
+OMP loads a snapshot of both root `MEMORY.md` files at session start or session switch. The snapshot stays fixed during the session, including after `/remember`, `/init-memory`, `/dreaming`, or `memory_write`. Start or load a session to refresh it. Tools always read the latest files. Snapshot loading never initializes or writes repositories; read failures produce diagnostics without blocking conversation.
+
+Explicit `/remember` notes generate only note candidates. Without a note, OMP uses the current model through a tool-free ephemeral turn, which does not enter session history. A 20-second cancellation deadline, unavailable model, invalid JSON or provider failure triggers heuristic extraction with a downgrade notice. A valid empty proposal stays empty.
+
+In the TUI, choose an entry to toggle its checkbox, then choose **Save selected memories**; **Cancel** or Escape discards the proposal. Other interactive hosts show the full proposal and require confirmation. With no UI (including RPC `--no-ui`), explicit notes save directly; automatic extraction only displays a proposal. Cancellation and empty proposals never create placeholder memories. If a Git commit fails after writing, the output explicitly reports that files were written but the commit is incomplete.
+
+For disposable local verification, set both directory overrides and isolate OMP configuration before using commands:
+
+```bash
+AGENT_MEMORY_GLOBAL_DIR=/tmp/memory-demo/global \
+AGENT_MEMORY_PROJECT_DIR=/tmp/memory-demo/project \
+PI_CODING_AGENT_DIR=/tmp/memory-demo/agent \
+omp --no-extensions -e ./dist/src/omp.js
+```
+
+Place `memory.backend: off` in that disposable agent directory's `config.yml`. To disable the plugin later, remove its loading configuration or uninstall its OMP link; memory files remain on disk.
 
 ---
 
@@ -188,7 +241,7 @@ pi install --local npm:pi-agent-memory-repo
 # Compile TypeScript
 npm run build
 
-# Run unit and integration tests (38 tests across 5 suites)
+# Run unit and integration tests
 npm test
 
 # Dry-run npm pack to verify bundle contents

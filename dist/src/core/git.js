@@ -131,6 +131,10 @@ export async function gitCommit(dir, message, maxRetries = 4) {
         // Commit
         const commitRes = await runGit(["commit", "-m", message], dir);
         if (commitRes.exitCode !== 0) {
+            // Another writer may have committed the staged changes since our status check.
+            if (commitRes.stdout.includes("nothing to commit") && (await gitStatus(dir)).clean) {
+                return { success: true, output: commitRes.stdout };
+            }
             lastError = `git commit failed: ${commitRes.stderr}`;
             if (commitRes.stderr.includes("index.lock") && attempt < maxRetries - 1) {
                 await sleep(60 * (attempt + 1) + Math.floor(Math.random() * 30));

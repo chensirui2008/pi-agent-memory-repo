@@ -27,7 +27,10 @@ export async function handleInitCommand(args, ctx) {
         try {
             const res = await initRepo(mapping.path, mapping.scope);
             const scopeLabel = mapping.scope === "global" ? "Universal Memory" : "Project Memory";
-            if (res.created) {
+            if (res.commitError) {
+                messages.push(`⚠️ Files written for ${scopeLabel} at \`${res.repoPath}\`, but Git commit incomplete: ${res.commitError}`);
+            }
+            else if (res.created) {
                 messages.push(`✅ Initialized new ${scopeLabel} at \`${res.repoPath}\``);
             }
             else {

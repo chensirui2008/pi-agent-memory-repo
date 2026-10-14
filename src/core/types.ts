@@ -69,6 +69,7 @@ export interface DreamingReport {
   synthesizedEntries: string[];
   mergedEntries: string[];
   commitHash?: string;
+  commitError?: string;
 }
 
 /**

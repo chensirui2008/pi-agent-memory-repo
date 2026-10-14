@@ -342,6 +342,8 @@ export async function runDreaming(repoPath, scope) {
         const commitMsg = `dreaming: synthesize cross-session patterns (${report.patternsSynthesized} patterns, ${report.duplicatesMerged} duplicates merged)`;
         const commitRes = await gitCommit(resolvedPath, commitMsg);
         report.commitHash = commitRes.hash;
+        if (!commitRes.success)
+            report.commitError = commitRes.output;
     }
     return report;
 }

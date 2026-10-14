@@ -80,8 +80,13 @@ export async function initRepo(repoPath, scope, customTitle) {
     }
     // Initialize git if not already a repo
     if (!isGitRepo(resolvedPath)) {
-        await gitInit(resolvedPath);
-        await gitCommit(resolvedPath, "init: initialize agent memory repository");
+        const initResult = await gitInit(resolvedPath);
+        const commitResult = initResult.success
+            ? await gitCommit(resolvedPath, "init: initialize agent memory repository")
+            : { success: false, output: initResult.output };
+        if (!commitResult.success) {
+            return { created: !existed, repoPath: resolvedPath, commitError: commitResult.output };
+        }
     }
     return { created: !existed, repoPath: resolvedPath };
 }
@@ -276,6 +281,7 @@ export async function writeEntry(repoPath, factText, options) {
         entry,
         committed: commitResult.success,
         hash: commitResult.hash,
+        commitError: commitResult.success ? undefined : commitResult.output,
     };
 }
 /**

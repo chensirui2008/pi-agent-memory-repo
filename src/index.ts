@@ -1,6 +1,5 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { getGlobalMemoryDir, getProjectMemoryDir } from "./config.js";
+import { buildMemoryContext } from "./core/context.js";
+export { buildMemoryContext } from "./core/context.js";
 import { handleInitCommand } from "./commands/init.js";
 import { handleRememberCommand } from "./commands/remember.js";
 import { handleDreamingCommand } from "./commands/dreaming.js";
@@ -28,47 +27,6 @@ export * from "./commands/init.js";
 export * from "./commands/remember.js";
 export * from "./commands/dreaming.js";
 export * from "./commands/status.js";
-
-/**
- * Generates compact memory context to inject into LLM session turns.
- */
-export function buildMemoryContext(workspaceDir?: string): string {
-  const globalDir = getGlobalMemoryDir();
-  const projectDir = getProjectMemoryDir(workspaceDir);
-
-  const globalMemoryPath = path.join(globalDir, "MEMORY.md");
-  const projectMemoryPath = path.join(projectDir, "MEMORY.md");
-
-  const globalContent = fs.existsSync(globalMemoryPath)
-    ? fs.readFileSync(globalMemoryPath, "utf8").trim()
-    : null;
-  const projectContent =
-    projectMemoryPath !== globalMemoryPath && fs.existsSync(projectMemoryPath)
-      ? fs.readFileSync(projectMemoryPath, "utf8").trim()
-      : null;
-
-  if (!globalContent && !projectContent) {
-    return "";
-  }
-
-  const sections: string[] = [
-    "<agent_memory>",
-    "Persistent cross-session long-term memory (Cognition Agent Memory Repo standard).",
-    "Navigate deeper topics via [[topics/...]] using memory_read or memory_recall.",
-    "",
-  ];
-
-  if (globalContent) {
-    sections.push("## Universal Memory (~/.pi/agent-memory/MEMORY.md)", globalContent, "");
-  }
-
-  if (projectContent) {
-    sections.push("## Project Memory (.pi/memory/MEMORY.md)", projectContent, "");
-  }
-
-  sections.push("</agent_memory>");
-  return sections.join("\n");
-}
 
 /**
  * Registers a slash command accommodating multiple Pi API signatures:

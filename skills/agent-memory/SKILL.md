@@ -119,3 +119,14 @@ Users and agents can invoke slash commands:
 - `/remember [notes]`: Autonomously distills conversation key points, presents an interactive TUI proposal modal, and commits to Git memory only after user approval.
 - `/dreaming [global|project|all]`: Analyzes memories, eliminates duplicates, resolves conflicts, and synthesizes higher-level pattern rules.
 - `/status`: Displays memory repository paths, Git branches, commit counts, and broken link diagnostics.
+
+
+## 5. OMP adapter
+
+OMP loads the dedicated `dist/src/omp.js` entry through `omp.extensions`; Pi uses its existing entry. Try `omp -e ./dist/src/omp.js`, or install the package locally with `omp plugin link /absolute/path/to/pi-agent-memory-repo`. Configure `memory.backend: off` in OMP's active user/project `config.yml`. This adapter does not own `/memory`, `ctx.memory`, or `memory://`.
+
+Use `/init-memory [global|project|all]` and `/memory-status` in OMP; `/init` and `/status` remain host commands. `/dreaming` uses the same rule-based consolidation. Both hosts share the `.pi` memory directories and the two `AGENT_MEMORY_*_DIR` overrides without migration. Write sequentially across hosts; concurrent multi-process writes are not guaranteed safe.
+
+OMP injects a root-memory snapshot at session start/switch. Writes do not refresh it until another session is loaded, while tools read current files. Loading a snapshot never creates repositories.
+
+OMP `/remember [global|project] [note]` proposes only explicit note facts when text is supplied. Otherwise it uses the current model in a tool-free ephemeral turn with a 20-second cancellation deadline, falling back to heuristic extraction with a notice. TUI users toggle individual entries in native selectors and save selected entries; other interactive hosts confirm the full proposal. Without UI, explicit notes save directly, but automatic proposals are display-only. Cancellation, extraction with no facts, and empty proposals never write placeholders. Report a failed Git commit as files written with an incomplete commit, never as full success.

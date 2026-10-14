@@ -29,6 +29,10 @@ export async function handleDreamingCommand(args: string, ctx: CommandContext): 
         `- **Files Modified:** ${report.filesModified.length > 0 ? report.filesModified.map((f) => `\`${f}\``).join(", ") : "None"}`
       );
 
+      if (report.commitError) {
+        reportLines.push(`⚠️ Files written, but Git commit incomplete: ${report.commitError}`);
+      }
+
       if (report.commitHash) {
         reportLines.push(`- **Git Commit:** \`${report.commitHash}\``);
       }

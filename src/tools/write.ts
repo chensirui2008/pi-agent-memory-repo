@@ -46,7 +46,7 @@ export const memoryWriteTool: ToolDefinition = {
     }
 
     try {
-      const { entry, committed, hash } = await writeEntry(repoPath, params.content, {
+      const { entry, committed, hash, commitError } = await writeEntry(repoPath, params.content, {
         file: params.file,
         scope,
         metadata,
@@ -54,7 +54,8 @@ export const memoryWriteTool: ToolDefinition = {
 
       const hashInfo = hash ? ` (commit ${hash})` : "";
       const text = [
-        `Successfully saved memory entry to ${scope} repository${hashInfo}:`,
+        committed ? `Successfully saved memory entry to ${scope} repository${hashInfo}:`
+          : `File written to ${scope} repository, but Git commit incomplete: ${commitError || "unknown error"}`,
         "",
         `\`${entry.raw}\``,
         "",
@@ -63,6 +64,7 @@ export const memoryWriteTool: ToolDefinition = {
 
       return {
         content: [{ type: "text", text }],
+        ...(committed ? {} : { isError: true }),
       };
     } catch (err: any) {
       return {

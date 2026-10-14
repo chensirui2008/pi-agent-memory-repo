@@ -11,6 +11,7 @@ export declare function getTodayDate(): string;
 export declare function initRepo(repoPath: string, scope: MemoryScope, customTitle?: string): Promise<{
     created: boolean;
     repoPath: string;
+    commitError?: string;
 }>;
 /**
  * Recursively lists all markdown and documentation files in the memory repository.
@@ -48,6 +49,7 @@ export declare function writeEntry(repoPath: string, factText: string, options?:
     entry: MemoryEntry;
     committed: boolean;
     hash?: string;
+    commitError?: string;
 }>;
 /**
  * Retrieves the comprehensive status of a memory repository.

@@ -71,7 +71,7 @@ export async function initRepo(
   repoPath: string,
   scope: MemoryScope,
   customTitle?: string
-): Promise<{ created: boolean; repoPath: string }> {
+): Promise<{ created: boolean; repoPath: string; commitError?: string }> {
   const resolvedPath = path.resolve(repoPath);
   const existed = fs.existsSync(resolvedPath);
 
@@ -110,8 +110,13 @@ export async function initRepo(
 
   // Initialize git if not already a repo
   if (!isGitRepo(resolvedPath)) {
-    await gitInit(resolvedPath);
-    await gitCommit(resolvedPath, "init: initialize agent memory repository");
+    const initResult = await gitInit(resolvedPath);
+    const commitResult = initResult.success
+      ? await gitCommit(resolvedPath, "init: initialize agent memory repository")
+      : { success: false, output: initResult.output };
+    if (!commitResult.success) {
+      return { created: !existed, repoPath: resolvedPath, commitError: commitResult.output };
+    }
   }
 
   return { created: !existed, repoPath: resolvedPath };
@@ -267,7 +272,7 @@ export async function writeEntry(
   repoPath: string,
   factText: string,
   options?: WriteEntryOptions
-): Promise<{ entry: MemoryEntry; committed: boolean; hash?: string }> {
+): Promise<{ entry: MemoryEntry; committed: boolean; hash?: string; commitError?: string }> {
   const resolvedPath = path.resolve(repoPath);
   const scope = options?.scope || "project";
 
@@ -354,6 +359,7 @@ export async function writeEntry(
     entry,
     committed: commitResult.success,
     hash: commitResult.hash,
+    commitError: commitResult.success ? undefined : commitResult.output,
   };
 }
 

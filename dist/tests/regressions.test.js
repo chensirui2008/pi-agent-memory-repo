@@ -6,8 +6,18 @@ import * as path from "node:path";
 import { initRepo, readMemoryFile, writeEntry, getStatus, scanRepo } from "../src/core/repo.js";
 import { runDreaming } from "../src/core/dreaming.js";
 import { parseMemoryFile } from "../src/core/parser.js";
-import extension, { memoryWriteTool, memoryReadTool, memoryListTool, memoryRecallTool } from "../src/index.js";
-import { handleRememberCommand } from "../src/commands/remember.js";
+import extension, { memoryWriteTool, memoryReadTool, memoryListTool, memoryRecallTool, extractMessageText as extractMessageTextFromEntrypoint } from "../src/index.js";
+import { handleRememberCommand, extractMessageText } from "../src/commands/remember.js";
+it("exports extractMessageText from both the package entrypoint and remember module", () => {
+    for (const extract of [extractMessageTextFromEntrypoint, extractMessageText]) {
+        assert.equal(extract({ content: "Remember this" }), "Remember this");
+        assert.equal(extract({ content: [
+                { type: "text", text: "First note" },
+                { type: "image", data: "fixture" },
+                { type: "text", text: "Second note" },
+            ] }), "First note\nSecond note");
+    }
+});
 it("consolidation preserves independent entries with shared or absent sources", async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "identity-"));
     try {

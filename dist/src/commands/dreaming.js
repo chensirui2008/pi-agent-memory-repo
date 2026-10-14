@@ -14,6 +14,9 @@ export async function handleDreamingCommand(args, ctx) {
         try {
             const report = await runDreaming(mapping.path, mapping.scope);
             reportLines.push(`- **Synthesized Patterns:** ${report.patternsSynthesized}`, `- **Duplicates Merged:** ${report.duplicatesMerged}`, `- **Contradictions Resolved:** ${report.contradictionsResolved}`, `- **Files Modified:** ${report.filesModified.length > 0 ? report.filesModified.map((f) => `\`${f}\``).join(", ") : "None"}`);
+            if (report.commitError) {
+                reportLines.push(`⚠️ Files written, but Git commit incomplete: ${report.commitError}`);
+            }
             if (report.commitHash) {
                 reportLines.push(`- **Git Commit:** \`${report.commitHash}\``);
             }

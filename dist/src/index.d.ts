@@ -1,3 +1,4 @@
+export { buildMemoryContext } from "./core/context.js";
 import { ExtensionAPI } from "./core/types.js";
 export * from "./config.js";
 export * from "./core/types.js";
@@ -15,10 +16,6 @@ export * from "./commands/init.js";
 export * from "./commands/remember.js";
 export * from "./commands/dreaming.js";
 export * from "./commands/status.js";
-/**
- * Generates compact memory context to inject into LLM session turns.
- */
-export declare function buildMemoryContext(workspaceDir?: string): string;
 /**
  * Pi Package Extension Entrypoint
  */

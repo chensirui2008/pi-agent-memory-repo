@@ -61,6 +61,7 @@ export interface DreamingReport {
     synthesizedEntries: string[];
     mergedEntries: string[];
     commitHash?: string;
+    commitError?: string;
 }
 /**
  * Pi Coding Agent Extension API types
